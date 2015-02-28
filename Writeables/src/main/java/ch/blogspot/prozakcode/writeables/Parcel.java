@@ -20,12 +20,15 @@ public class Parcel<K extends Writeable> implements Writeable{
     // an array indicating the dimensions od the parcel
     private int[] dimensions;
 
+    Class<K> containee;
+
     // an collection of contents which only have to be writable to be stored
     private Collection<K> contents;
 
-    public Parcel(int[] dims){
+    public Parcel(Class<K> class,int[] dims){
 	dimensions = Arrays.copyOf(dims,dims.length);
 	contents = new LinkedList<K>();
+	containee = class;
     }
 
 
@@ -36,6 +39,11 @@ public class Parcel<K extends Writeable> implements Writeable{
 	}
 	
     }
+
+    public Collection<K> contents(){
+	return contents;
+    }
+
 
     public void readFields(DataInput input){
 	synchronized(contents){
@@ -50,7 +58,7 @@ public class Parcel<K extends Writeable> implements Writeable{
 		contents = new LinkedList<K>();
 		Class<K> factory = Class.forName();
 		while(true){
-		    K cElem = factory.newInstance();
+		    K cElem = containee.newInstance();
 		    cElem.readFields(input);
 		    contents.add(cElem);
 		}
