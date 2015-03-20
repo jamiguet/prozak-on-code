@@ -233,8 +233,160 @@ public class CoalescingTest{
 	assertEquals(count,read);
 	assertEquals(expected*count,total);
 	
+    }
+
+    @Test
+    public void testRecoallesceCollection() throws IOException{
+	// In this test we take a collection that is compressed and
+	// then coallesce it with the next one.
+
+	UUID store = UUID.randomUUID();
+
+	LinkedList<Long> lll = new LinkedList<Long>();
+
+	int count =10;
+	long expected = 3;
+	long total = 0;
+	int read = 0;
+
+	for(int i=0 ; i<count ; i++){
+	    lll.add(expected);
+	}
+
+	CoalescingTools.coalesce(store,lll.toArray(new Long[0]));
+
+	// compressed has 10*3
+	String compressed = CoalescingTools.read(store);
+
+	// we now make it 5*10*3 with a mix of compressed or not
+
+	store = UUID.randomUUID();
+	
+	CoalescingTools.coalesce(store,lll.toArray(new Long[0]));
+	CoalescingTools.coalesce(store,compressed,true);
+	CoalescingTools.coalesce(store,lll.toArray(new Long[0]));
+	CoalescingTools.coalesce(store,compressed,true);
+	CoalescingTools.coalesce(store,compressed,true);
+
+	try(
+	    DataInputStream dis = CoalescingTools.readData(store)
+	    ){
+		while(true){
+		    total += dis.readLong();
+		    read++;
+		}
+	    }
+	catch(EOFException eofe) { }
+	catch(IOException ioe){ System.out.println(ioe.toString()); }
+	
+	assertEquals(5*10*3,total);
+	assertEquals(50,read);
+	    	
+    }
+
+
+
+    @Test
+    public void compressedIteratorTest(){
+
+	// First we create some data
+
+	UUID store = UUID.randomUUID(); 
+	UUID store2 = UUID.randomUUID(); 	
+	
+
+	LinkedList<Long> lll = new LinkedList<Long>();
+
+	int count =1000;
+	long expected = 3;
+	long total = 0;
+	int read = 0;
+
+	for(int i=0 ; i<count ; i++){
+	    lll.add(expected);
+	}
+
+	CoalescingTools.coalesce(store,lll.toArray(new Long[0]));
+
+	CoalescingTools.CompressedIterator iterator = new CoalescingTools.CompressedIterator(store);
+
+	LinkedList<String> state = new LinkedList<String>();
+	for(String cStr:iterator){
+	    state.add(cStr);
+	}
+
+	// then we re-coallesce 
+	for(String cstr:state){
+	    CoalescingTools.coalesce(store2,cstr,true);
+	}
+	
+	// to finally consume
+	try(
+	    DataInputStream dis = CoalescingTools.readData(store2)
+	    ){
+		while(true){
+		    total += dis.readLong();
+		    read++;
+		}
+	    }
+	catch(EOFException eofe) { }
+	catch(IOException ioe){ System.out.println(ioe.toString()); }
+	
+	assertEquals(count*expected,total);
+	assertEquals(count,read);
+
 
     }
+    
+    
+
+    @Test
+    public void testUnCompressedIterator() throws IOException{
+	// In this test we take a collection that is compressed and
+	// then coallesce it with the next one.
+
+	UUID store = UUID.randomUUID();
+
+	LinkedList<Long> lll = new LinkedList<Long>();
+
+	int count =10;
+	long expected = 3;
+	long total = 0;
+	int read = 0;
+
+	for(int i=0 ; i<count ; i++){
+	    lll.add(expected);
+	}
+
+	CoalescingTools.coalesce(store,lll.toArray(new Long[0]));
+
+	// compressed has 10*3
+	String compressed = CoalescingTools.read(store);
+
+	// we now make it 5*10*3 with a mix of compressed or not
+
+	store = UUID.randomUUID();
+	
+	CoalescingTools.coalesce(store,lll.toArray(new Long[0]));
+	CoalescingTools.coalesce(store,compressed,true);
+	CoalescingTools.coalesce(store,lll.toArray(new Long[0]));
+	CoalescingTools.coalesce(store,compressed,true);
+	CoalescingTools.coalesce(store,compressed,true);
+
+	CoalescingTools.UnCompressedIterator<Long> iter = new CoalescingTools.UnCompressedIterator<Long>(store,Long.class);
+
+	for(Long cLong:iter){
+	    total+= cLong;
+	    read++;
+	}
+	
+	
+	assertEquals(5*count*expected,total);
+	assertEquals(5*count,read);
+	    	
+    }
+
+
 
 
 }
