@@ -1,6 +1,6 @@
 package ch.blogspot.prozakcode.writeables;
 
-import java.io.DataInput;
+import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.EOFException;
@@ -26,12 +26,22 @@ public class Parcel<K extends Writeable> implements Writeable{
     // Collection of contents which only have to be writable to be stored
     private Collection<K> contents;
 
+    
     /**
      * Constructor
      * @param clazz Class<K>  class object for the contents of the parcel
-     * @param dims int[] Phisical dimensions of the parcel
      */
-    public Parcel(Class<K> clazz,int[] dims){
+    public Parcel(Class<K>  clazz){
+	containee = clazz;
+    }
+
+
+    /**
+     * Constructor
+     * @param clazz Class<K>  class object for the contents of the parcel
+     * @param dims int[] Physical dimensions of the parcel
+     */
+    public Parcel(Class<K> clazz,int...dims){
 	dimensions = Arrays.copyOf(dims,dims.length);
 	contents = new LinkedList<K>();
 	containee = clazz;
@@ -44,7 +54,7 @@ public class Parcel<K extends Writeable> implements Writeable{
     public void add(K thing){
 	synchronized(this){
 	    contents.add(thing);
-	    contents.notifyAll();
+	    this.notifyAll();
 	}
     }
 
@@ -76,29 +86,28 @@ public class Parcel<K extends Writeable> implements Writeable{
      * Method reading the fields of the object from a DataInput object
      * @param input DataInput object from which the fields are read.
      */
-    public void readFields(DataInput input) throws IOException{
+    public void readFields(DataInputStream input) throws IOException{
 	synchronized(this){
 	    try {
 		String[] sDims = input.readUTF().split(",");
 		dimensions = new int[sDims.length];
 		int pos =0;
 		for(String cStr:sDims){
-		    dimensions[pos++] = Integer.parseInt(cStr);
+		    dimensions[pos++] = Integer.parseInt(cStr.trim());
 		}
 
 		contents = new LinkedList<K>();
-		while(true){
+		while(input.available()!=0){
 		    K cElem = containee.newInstance();
 		    cElem.readFields(input);
 		    contents.add(cElem);
+		
 		}
 		
 	    }catch(EOFException eofe){ }
 	    catch(InstantiationException ie){ }
 	    catch(IllegalAccessException iae) { }
-	    finally {
-		contents.notifyAll();
-	    }
+	    finally{ this.notifyAll(); }
 	}
     }
 
@@ -112,7 +121,7 @@ public class Parcel<K extends Writeable> implements Writeable{
 	    for(Writeable cw: contents){
 		cw.write(output);
 	    }
-	    contents.notifyAll();
+	    this.notifyAll();
 	}
 
     }
@@ -127,9 +136,12 @@ public class Parcel<K extends Writeable> implements Writeable{
 	synchronized(this){
 	    if( other instanceof Parcel ){
 		Parcel o = (Parcel) other;
-		answer = Arrays.equals(o.dimensions,this.dimensions) && o.contents.equals(this.contents);
+		answer = Arrays.equals(o.dimensions,this.dimensions);
+		answer = answer 
+		    && Arrays.deepEquals(this.contents.toArray(),o.contents.toArray());
+
 	    }
-	    contents.notifyAll();
+	    this.notifyAll();
 	}
 	return answer;
     }
