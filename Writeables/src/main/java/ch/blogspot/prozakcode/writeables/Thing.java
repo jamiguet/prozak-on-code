@@ -3,7 +3,7 @@ package ch.blogspot.prozakcode.writeables;
 import java.util.Arrays;
 import java.util.LinkedList;
 
-import java.io.DataInputStream;
+import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.EOFException;
@@ -16,6 +16,7 @@ public class Thing implements Writeable{
 
     private String description = null;
     private int[] dimensions = null;
+    private boolean contained = false;
 
     public Thing(){ }
 
@@ -28,6 +29,10 @@ public class Thing implements Writeable{
 	return Arrays.copyOf(dimensions,dimensions.length);
     }
 
+
+    public void setContained(boolean cont){
+	contained = cont;
+    }
     @Override
     public String toString(){
 	StringBuffer res = new StringBuffer();
@@ -39,27 +44,23 @@ public class Thing implements Writeable{
 
     public void write(DataOutput out) throws IOException{
 	out.writeUTF(description);
+	out.writeInt(dimensions.length);
 	for(int cInt:dimensions){
 	    out.writeInt(cInt);
 	}
     }
 
-    public void readFields(DataInputStream in) throws IOException{
-	LinkedList<Integer> lli = new LinkedList<Integer>();	
+    public void readFields(DataInput in) throws IOException{
+	
 	try{
 	    description = in.readUTF();
-
-	    while(in.available()!=0){
-		lli.add(in.readInt());
+	    int dims = in.readInt();
+	    dimensions = new int[dims];
+	    for(int i =0; i<dimensions.length; i++){
+		dimensions[i]=in.readInt();
 	    }
-	} catch(EOFException eofe) {  }
-	finally{
-	    dimensions = new int[lli.size()];
-	    int pos =0;
-	    for(int cInt:lli){
-		dimensions[pos++] = cInt;
-	    }
-	}
+	} catch(EOFException eofe) { if (contained) throw eofe; }
+	
     }
 
     @Override

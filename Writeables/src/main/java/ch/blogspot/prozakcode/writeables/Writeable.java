@@ -27,4 +27,8 @@ public interface Writeable{
 
     public void write(DataOutput output) throws IOException;
 
+
+
+    public void setContained(boolean cont);
+
 }

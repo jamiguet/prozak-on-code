@@ -27,6 +27,9 @@ public class Parcel<K extends Writeable> implements Writeable{
     // Collection of contents which only have to be writable to be stored
     private Collection<K> contents;
 
+    private boolean contained = false;
+
+
     /**
      * Constructor
      * @param clazz Class<K>  class object for the contents of the parcel
@@ -46,6 +49,13 @@ public class Parcel<K extends Writeable> implements Writeable{
 	contents = new LinkedList<K>();
 	containee = clazz;
     }
+
+
+
+    public void setContained(boolean cont){
+	contained = cont;
+    }
+
 
     /**
      * Method adding an element to the parcel
@@ -93,23 +103,22 @@ public class Parcel<K extends Writeable> implements Writeable{
 		dimensions = new int[sDims.length];
 		int pos =0;
 		for(String cStr:sDims){
-		    dimensions[pos++] = Integer.parseInt(cStr);
+		    dimensions[pos++] = Integer.parseInt(cStr.trim());
 		}
 
 		contents = new LinkedList<K>();
 		while(true){
 		    K cElem = containee.newInstance();
+		    cElem.setContained(true);
 		    cElem.readFields(input);
 		    contents.add(cElem);
-		    dimensions[pos++] = Integer.parseInt(cStr.trim());
 		}
 		
-	    }catch(EOFException eofe){ // check here if we are contained and re-fire the exception }
-	    catch(InstantiationException ie){ }
-	    catch(IllegalAccessException iae) { }
+	    }catch(EOFException eofe){ if (contained) throw eofe;  }
+	    catch(InstantiationException ie){ ie.printStackTrace(); }
+	    catch(IllegalAccessException iae) {iae.printStackTrace(); }
 
 	    finally{ this.notifyAll(); }
-
 	}
     }
 
@@ -146,6 +155,19 @@ public class Parcel<K extends Writeable> implements Writeable{
 	    this.notifyAll();
 	}
 	return answer;
+    }
+
+
+    @Override
+    public String toString(){
+	StringBuffer res = new StringBuffer();
+	res.append(Arrays.toString(dimensions));
+	for(K elem: contents){
+	    res.append(elem.toString());
+	    res.append(", ");
+	}
+
+	return res.toString();
     }
 
 }

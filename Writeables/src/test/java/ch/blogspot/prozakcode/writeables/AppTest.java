@@ -58,9 +58,11 @@ public class AppTest
 	try( FileOutputStream fos = new FileOutputStream("/tmp/"+fName.toString());
 	     DataOutputStream dos = new DataOutputStream(fos)){
 		expectedParcel.write(dos);
+		dos.close();
 	    }catch(IOException ioe){
 	    ioe.printStackTrace();
 	}
+
 	Parcel test = new Parcel(Thing.class);
 	try( FileInputStream fis = new FileInputStream("/tmp/"+fName.toString());
 	     DataInputStream dis = new DataInputStream(fis)){
